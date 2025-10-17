@@ -128,7 +128,7 @@ services:
 
   legal-ai:
     build:
-      context: ./services/legal_ai_1C/backend
+      context: ./services/legal_ai_1C/api
       dockerfile: Dockerfile
       target: runtime
     depends_on:
@@ -158,10 +158,10 @@ services:
       RERANK_BATCH: "8"
       RERANK_DEBUG: "0"
       NET_TEST_URLS: https://pravo.gov.ru/
-    working_dir: /workspace/backend
+    working_dir: /workspace/api
     command: uvicorn app:app --host 0.0.0.0 --port 8000 --log-level info
     volumes:
-      - ./services/legal_ai_1C/backend:/workspace/backend
+      - ./services/legal_ai_1C/api:/workspace/api
       - ./services/legal_ai_1C/corpus:/workspace/corpus:ro
     expose:
       - "8000"

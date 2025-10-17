@@ -1,5 +1,9 @@
-import json, os, numpy as np
+import json
+import os
+from threading import Lock
 from typing import List
+
+import numpy as np
 
 try:  # pragma: no cover - optional dependency
     from qdrant_client import QdrantClient  # type: ignore
@@ -11,9 +15,13 @@ except Exception:  # noqa: S110
 from .embedder import get_embedder
 from ..types import IngestItem, SourceItem
 from ..config import settings
+from ..logger import get_logger
 from ..utils import deterministic_point_id, text_hash
 
 _qdrant = None
+_qdrant_lock = Lock()
+
+logger = get_logger(__name__)
 
 def _require_qdrant() -> None:
     if QdrantClient is None:
@@ -24,7 +32,9 @@ def get_qdrant() -> QdrantClient:
     _require_qdrant()
     global _qdrant
     if _qdrant is None:
-        _qdrant = QdrantClient(url=settings.QDRANT_URL, timeout=2.0)
+        with _qdrant_lock:
+            if _qdrant is None:
+                _qdrant = QdrantClient(url=settings.QDRANT_URL, timeout=2.0)
     return _qdrant
 
 def ensure_collection():
@@ -63,12 +73,22 @@ def rag_search_ru(query: str, top_k: int = 8) -> List[SourceItem]:
     try:
         ensure_collection()
     except RuntimeError:
+        logger.warning("Qdrant unavailable; skipping RAG search")
         return []
     emb = get_embedder()
     client = get_qdrant()
     qv = emb.encode([query], normalize_embeddings=True)[0].astype(np.float32).tolist()
     flt = Filter(must=[FieldCondition(key="jurisdiction", match=MatchValue(value="RU"))])
-    res = client.search(collection_name=settings.QDRANT_COLLECTION, query_vector=qv, limit=top_k, query_filter=flt)
+    try:
+        res = client.search(
+            collection_name=settings.QDRANT_COLLECTION,
+            query_vector=qv,
+            limit=top_k,
+            query_filter=flt,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("Qdrant search failed")
+        return []
     out: List[SourceItem] = []
     for r in res:
         p = r.payload or {}

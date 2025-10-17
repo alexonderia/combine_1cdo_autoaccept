@@ -1,8 +1,8 @@
 {
   "name": "legal-ai-dev",
   "dockerComposeFile": ["../docker-compose.yml"],
-  "service": "backend",
-  "runServices": ["ollama", "qdrant", "ollama-pull", "backend"],
+  "service": "api",
+  "runServices": ["ollama", "qdrant", "ollama-pull", "api"],
   "workspaceFolder": "/workspace",
   "overrideCommand": false,
   "waitFor": "container",

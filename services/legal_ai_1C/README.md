@@ -20,28 +20,28 @@
 
 ## Структура
 ```
-backend/
+api/
 ├─ app.py
 ├─ app_core/
-│ ├─ main.py # сборка приложения
-│ ├─ config.py # ENV/настройки
-│ ├─ types.py # Pydantic-схемы
-│ ├─ scoring.py # разделы, расчёт баллов, focus
-│ ├─ utils.py # утилиты (JSON, кэш, dedup, id)
-│ ├─ startup.py # лёгкие startup-проверки
-│ ├─ llm/ollama.py # вызовы Ollama
-│ ├─ rag/embedder.py # BGE-M3 (GPU/CPU auto)
-│ ├─ rag/store.py # Qdrant: ingest/search
-│ ├─ rerank.py # bge-reranker-v2-m3 (GPU)
-+│ ├─ rag/html_extract.py # общий HTML→текст парсер + чанкование
-+│ ├─ rag/pub_pravo.py # site-aware парсер публикаций (Статья/Часть/Пункт)
+│ ├─ main.py              # сборка приложения
+│ ├─ config.py            # ENV/настройки
+│ ├─ types.py             # Pydantic-схемы
+│ ├─ scoring.py           # разделы, расчёт баллов, focus
+│ ├─ utils.py             # утилиты (JSON, кэш, dedup, id)
+│ ├─ startup.py           # лёгкие startup-проверки
+│ ├─ llm/ollama.py        # вызовы Ollama
+│ ├─ rag/embedder.py      # BGE-M3 (GPU/CPU auto)
+│ ├─ rag/store.py         # Qdrant: ingest/search
+│ ├─ rag/html_extract.py  # общий HTML→текст парсер + чанкование
+│ ├─ rag/pub_pravo.py     # site-aware парсер публикаций (Статья/Часть/Пункт)
+│ ├─ rerank.py            # bge-reranker-v2-m3 (GPU)
 │ └─ routes/
-│ ├─ health.py # GET /health
-│ ├─ ingest.py # POST /rag/ingest(_sample)
-│ └─ analyze.py # POST /analyze, /generate
-+│ └─ connectivity.py # GET /net/check, GET /net/fetch
+│    ├─ analyze.py        # POST /analyze, /generate
+│    ├─ connectivity.py   # GET /net/check, GET /net/fetch
+│    ├─ health.py         # GET /health
+│    └─ ingest.py         # POST /rag/ingest(_sample)
 corpus/
-└─ ru_sample.jsonl # демо-НПА
+└─ ru_sample.jsonl        # демо-НПА
 ```
 
 ---
@@ -75,23 +75,23 @@ curl -s -X POST http://localhost:8000/analyze \
 
 # 6) Полная пересборка c базовым образом
 docker compose down --remove-orphans
-# при необходимости удалите старые образы: docker rmi legal-ai/backend:dev legal-ai/backend-base:cu130
-docker build --no-cache -f backend/Dockerfile.base -t legal-ai/backend-base:cu130 backend
-docker compose build --no-cache backend
+# при необходимости удалите старые образы: docker rmi legal-ai/api:dev legal-ai/api-base:cu130
+docker build --no-cache -f api/Dockerfile.base -t legal-ai/api-base:cu130 api
+docker compose build --no-cache api
 docker compose up -d
 
 # 7) Обновить только лёгкие зависимости (requirements.txt)
-docker compose build backend
-docker compose up -d backend
+docker compose build api
+docker compose up -d api
 ```
 
 ### Разделение зависимостей
 
-- `backend/Dockerfile.base` + `backend/requirements.base.txt` — тяжёлые пакеты (PyTorch, HuggingFace), которые ставятся редко.
-- `backend/Dockerfile` + `backend/requirements.txt` — лёгкие зависимости FastAPI, которые можно обновлять без пересборки base-образа.
+- `api/Dockerfile.base` + `api/requirements.base.txt` — тяжёлые пакеты (PyTorch, HuggingFace), которые ставятся редко.
+- `api/Dockerfile` + `api/requirements.txt` — лёгкие зависимости FastAPI, которые можно обновлять без пересборки base-образа.
 
-Добавили новую лёгкую библиотеку? Обновите `backend/requirements.txt`, затем `docker compose build backend && docker compose up -d backend`.
-Поменяли версию тяжёлого пакета? Обновите `backend/requirements.base.txt`, после чего пересоберите базовый образ и backend.
+Добавили новую лёгкую библиотеку? Обновите `api/requirements.txt`, затем `docker compose build api && docker compose up -d api`.
+Поменяли версию тяжёлого пакета? Обновите `api/requirements.base.txt`, после чего пересоберите базовый образ и api.
 
 ---
 

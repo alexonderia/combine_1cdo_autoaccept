@@ -25,7 +25,7 @@
 |-----------------------|------------------------------------|--------------------|----------|
 | Contract Extractor    | `http://localhost:8000/contract-extractor/*` | `18080 → 8080`     | FastAPI-приложение для извлечения полей |
 | Globas API            | `http://localhost:8000/globas/*`   | `18090 → 8000`     | FastAPI + PostgreSQL (`25432 → 5432`) |
-| Legal AI backend      | `http://localhost:8000/legal-ai/*` | `18100 → 8000`     | FastAPI, использует Ollama (`21434 → 11434`) и Qdrant (`26333 → 6333`, `26334 → 6334`) |
+| Legal AI API          | `http://localhost:8000/legal-ai/*` | `18100 → 8000`     | FastAPI, использует Ollama (`21434 → 11434`) и Qdrant (`26333 → 6333`, `26334 → 6334`) |
 
 > Все сервисы также доступны напрямую по проброшенным портам для отладки. Nginx проксирует запросы, обрезая префикс (`/contract-extractor`, `/globas`, `/legal-ai`).
 
@@ -74,6 +74,13 @@ curl -X POST http://localhost:8000/legal-ai/analyze \
   -H "Content-Type: application/json" \
   -d '{"text": "The supplier may impose a penalty for late payments. The buyer has no unilateral termination rights."}'
 ```
+
+## Документация
+
+* [Архитектура сервисов](docs/architecture.md) — обзор общих принципов.
+* [Contract Extractor](docs/contract_extractor.md) — подробности по сервису извлечения.
+* [Globas API](docs/globas.md) — описание проверки контрагентов.
+* [Legal AI Backend](docs/legal_ai.md) — сведения о сервисе юридического анализа.
 
 ## Работа с отдельными сервисами
 
