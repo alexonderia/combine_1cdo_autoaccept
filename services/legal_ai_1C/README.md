@@ -50,10 +50,15 @@ corpus/
 
 ```bash
 # 1) Модель для Ollama
+# (опционально, `docker compose` сделает то же самое через контейнер ollama-pull)
 ollama pull qwen2.5:7b-instruct
 
 # 2) Поднять стек
 docker compose up -d --build
+
+# При запуске вспомогательный контейнер **ollama-pull** ждёт готовности демона Ollama
+# и отправляет запрос `/api/pull` для модели из переменной `OLLAMA_MODEL`
+# (по умолчанию `qwen2.5:7b-instruct`). Если модель уже в томе `ollama`, загрузка пропускается.
 
 # 3) Проверить здоровье
 curl -s http://localhost:8000/health | jq
@@ -84,6 +89,16 @@ docker compose up -d
 docker compose build api
 docker compose up -d api
 ```
+
+### Ручная дозагрузка моделей Ollama
+
+Если нужно дополнительно скачать модель без перезапуска всего стека, выполните команду внутри работающего контейнера Ollama:
+
+```bash
+docker compose exec ollama ollama pull <имя_модели>
+```
+
+Модель будет сохранена в томе `ollama` и сразу станет доступна API.
 
 ### Разделение зависимостей
 
@@ -121,6 +136,20 @@ docker compose up -d api
 | `SCORE_YELLOW`       | `51`                      | порог жёлтого            |
 
 Рекомендуется смонтировать HF-кэш: .`/.hf_cache:/root/.cache/huggingface` (см. DEPLOY).
+
+---
+
+## Логирование
+
+- **Уровень логов** задаётся переменной `LOG_LEVEL` (значение по умолчанию — `INFO`). Для повышенной детализации запустите стек так:
+  ```bash
+  LOG_LEVEL=DEBUG docker compose up -d
+  ```
+- **Просмотр логов** выполняется через Docker Compose:
+  ```bash
+  docker compose logs -f api
+  ```
+  Для логов Ollama используйте `docker compose logs -f ollama`.
 
 ---
 
