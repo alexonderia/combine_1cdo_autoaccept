@@ -1,4 +1,8 @@
-version: "3.9"
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
 
 x-healthcheck-defaults: &healthcheck-defaults
   interval: 10s
@@ -73,14 +77,6 @@ services:
     networks:
       - backend
 
-  legal-ai-base:
-    build:
-      context: ./services/legal_ai_1C/backend
-      dockerfile: Dockerfile.base
-    image: legal-ai/backend-base:cu130
-    command: ["true"]
-    restart: "no"
-
   legal-ai-ollama:
     image: ollama/ollama:latest
     environment:
@@ -108,17 +104,17 @@ services:
       - /bin/sh
       - -lc
       - |
-        echo "[ollama-pull] waiting for ${OLLAMA_API} ..."
-        for i in $(seq 1 120); do
-          if curl -fsS ${OLLAMA_API}/api/tags >/dev/null; then
+        echo "[ollama-pull] waiting for $${OLLAMA_API} ..."
+        for i in $$(seq 1 120); do
+          if curl -fsS $${OLLAMA_API}/api/tags >/dev/null; then
             echo "[ollama-pull] server is up"; break
           fi
           sleep 2
         done
-        echo "[ollama-pull] pulling model ${OLLAMA_MODEL}"
-        curl -fsS -X POST ${OLLAMA_API}/api/pull \
+        echo "[ollama-pull] pulling model $${OLLAMA_MODEL}"
+        curl -fsS -X POST $${OLLAMA_API}/api/pull \
           -H 'Content-Type: application/json' \
-          -d '{"name":"'"${OLLAMA_MODEL}"'"}' \
+          -d '{"name":"'"$${OLLAMA_MODEL}"'"}' \
           | sed -u 's/^/[ollama-pull] /'
         echo "[ollama-pull] done"
     restart: "no"
@@ -139,11 +135,9 @@ services:
   legal-ai:
     build:
       context: ./services/legal_ai_1C/backend
-      args:
-        BASE_IMAGE: legal-ai/backend-base:cu130
+      dockerfile: Dockerfile
+      target: runtime
     depends_on:
-      legal-ai-base:
-        condition: service_completed_successfully
       legal-ai-ollama-pull:
         condition: service_completed_successfully
       legal-ai-qdrant:
