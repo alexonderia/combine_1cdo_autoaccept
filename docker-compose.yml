@@ -4,12 +4,6 @@ x-healthcheck-defaults: &healthcheck-defaults
   retries: 5
   start_period: 10s
 
-x-healthcheck-defaults: &healthcheck-defaults
-  interval: 10s
-  timeout: 5s
-  retries: 5
-  start_period: 10s
-
 services:
   proxy:
     build: ./proxy
