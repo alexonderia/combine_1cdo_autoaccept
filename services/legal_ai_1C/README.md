@@ -4,6 +4,8 @@
 
 **Стек:** FastAPI · Ollama (LLM: `qwen2.5:7b-instruct`) · Qdrant (вектора) · BGE-M3 (эмбеддер) · **bge-reranker-v2-m3** (GPU-реранкер).
 
+⚡ **GPU по умолчанию:** образы собраны с PyTorch nightly `cu130` (Blackwell, `sm_120`). Контейнер ожидает NVIDIA GPU (например, RTX 5090) и `nvidia-container-toolkit`; при отсутствии GPU автоматически переключится на CPU, но производительность заметно снизится.
+
 ---
 
 ## Возможности
@@ -119,18 +121,18 @@ docker compose exec ollama ollama pull <имя_модели>
 | `QDRANT_URL`         | `http://qdrant:6333`      | адрес Qdrant             |
 | `QDRANT_COLLECTION`  | `ru_law_m3`               | коллекция                |
 | `EMBEDDING_MODEL`    | `BAAI/bge-m3`             | эмбеддер                 |
-| `EMBED_DEVICE`       | `auto` | `cuda` | `cpu`   | устройство для эмбеддера |
+| `EMBED_DEVICE`       | `cuda` | `auto` | `cpu`   | устройство для эмбеддера |
 | `RAG_TOP_K`          | `8`                       | кандидаты до rerank      |
 | `RERANK_ENABLE`      | `1`                       | включить реранкер        |
 | `RERANKER_MODEL`     | `BAAI/bge-reranker-v2-m3` | модель реранка           |
-| `RERANK_DEVICE`      | `auto`                    | устройство для реранка   |
+| `RERANK_DEVICE`      | `cuda`                    | устройство для реранка   |
 | `RERANK_KEEP`        | `5`                       | оставить после rerank    |
 | `RERANK_BATCH`       | `16`                      | батч скоринга            |
 | `RERANK_DEBUG`       | `0`                       | лог скорингов            |
 | `STARTUP_CHECKS`     | `1`                       | лёгкие стартап-чеки      |
 | `SELF_CHECK_TIMEOUT` | `5`                       | таймаут пингов           |
 | `SELF_CHECK_GEN`     | `0`                       | тест-генерация на старте |
-| `STARTUP_CUDA_NAME`  | `0`                       | печатать имя GPU         |
+| `STARTUP_CUDA_NAME`  | `1`                       | печатать имя GPU         |
 | `SCORING_MODE`       | `strict` | `lenient`      | «мягкий» скоринг         |
 | `SCORE_GREEN`        | `75`                      | порог зелёного           |
 | `SCORE_YELLOW`       | `51`                      | порог жёлтого            |
