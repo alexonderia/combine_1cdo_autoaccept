@@ -1,0 +1,175 @@
+general:
+  seed: 42
+  today: 2025-10-06
+  n_companies: 200
+  n_persons: 320
+
+classes:
+  distribution: {red: 60, yellow: 80, green: 60}
+  balance: true
+  balance_passes: 12
+
+dictionaries:
+  # For API container, mount this config + locale-specific files into /app/config
+  surnames: "/app/config/ruRU/dictionaries/surnames.txt"
+  first_names: "/app/config/ruRU/dictionaries/first_names.txt"
+  patronymics: "/app/config/ruRU/dictionaries/patronymics.txt"
+  company_adjectives: "/app/config/ruRU/dictionaries/company_adjectives.txt"
+  company_nouns: "/app/config/ruRU/dictionaries/company_nouns.txt"
+  cities: "/app/config/ruRU/dictionaries/cities.txt"
+  streets: "/app/config/ruRU/dictionaries/streets.txt"
+  okveds: "/app/config/ruRU/dictionaries/okveds.txt"
+
+companies:
+  reg_year_range:
+    green: [2008, 2020]
+    yellow: [2015, 2023]
+    red: [2021, 2025]
+
+ownership:
+  owners_per_company:
+    green: [1,2,2,3]
+    yellow: [1,2,3]
+    red: [1,1,2]
+  company_owner_prob:
+    green: 0.25
+    yellow: 0.25
+    red: 0.35
+  share_base_non_red: 10
+  share_base_red: 20
+  sanction_inject:
+    fraction_red_companies_critical: 0.5
+    share_for_injected_owner: 60.0
+
+sanctions:
+  num_persons: 26
+  num_companies: 12
+  lists: ["OFAC SDN", "EU Consolidated", "UK HMT"]
+  authorities: ["OFAC","EU","HMT"]
+
+addresses:
+  mass_addresses_offices: [101,202,303,404,505]
+  mass_address_threshold: 8
+  mass_address_probability:
+    green: 0.10
+    yellow: 0.25
+    red: 0.45
+
+financials:
+  years: [2022, 2023, 2024]
+  revenue_lognormal_mean: 16.0
+  revenue_lognormal_sigma: 0.6
+  min_revenue: 1000000
+  min_assets: 5000000
+  min_liabilities: 1000000
+  assets_multiplier_range: [0.3, 0.9]
+  debt_noise_range: [0.8, 1.2]
+  green:
+    growth_mean: 0.08
+    growth_sigma: 0.05
+    margin_range: [0.08, 0.18]
+    debt_ratio_range: [0.15, 0.45]
+  yellow:
+    growth_mean: 0.03
+    growth_sigma: 0.07
+    margin_range: [0.02, 0.10]
+    loss_year_prob: 0.25
+    loss_margin_range: [-0.05, 0.01]
+    debt_ratio_range: [0.35, 0.95]
+  red:
+    growth_mean: -0.02
+    growth_sigma: 0.10
+    margin_range: [-0.12, 0.04]
+    debt_ratio_range: [0.8, 1.6]
+
+courts:
+  window_years: 3
+  amount_lognormal_mean: 13.0
+  amount_lognormal_sigma: 1.0
+  red_amount_scale: [1.5, 3.0]
+  poisson_rate:
+    green: 0.3
+    yellow: 2.0
+    red: 5.0
+  kinds: ["Иск","Исполнительное производство","Банкротство","Прочее"]
+  roles: ["Истец","Ответчик","Третье лицо"]
+  statuses: ["Рассмотрение","Решение","Исполнение","Завершено"]
+
+risk:
+  solvency:
+    base: 50
+    margin_brackets:
+      - {gt: 0.10, add: 20}
+      - {gt: 0.05, add: 10}
+      - {lt: -0.05, add: -30}
+      - {lt: 0.0, add: -20}
+      - {lt: 0.02, add: -10}
+    ratio_brackets:
+      - {le: 0.3, add: 10}
+      - {gt: 0.9, add: -20}
+      - {gt: 0.7, add: -10}
+    lawsuit_x: 10000000.0
+    lawsuit_penalty_per_x10: 10
+    lawsuit_penalty_cap: 30
+
+  reliability:
+    base: 60
+    age_bonus_after_years: 5
+    age_bonus: 10
+    young_years: 2
+    young_penalty: 5
+    director_changes_threshold: 2
+    director_changes_penalty: 15
+    mass_address_penalty: 25
+    non_active_penalty: 10
+
+  compliance:
+    elevated_threshold: 0.1
+    critical_threshold: 0.5
+    max_depth: 6
+    cutoff: 0.005
+
+grade_rules:
+  solvency_red_lt: 50
+  reliability_red_lt: 50
+  solvency_green_ge: 75
+  reliability_green_ge: 75
+
+due_diligence:
+  egrul_invalid_prob: {green: 0.02, yellow: 0.08, red: 0.25}
+  identity_mismatch_prob: {green: 0.03, yellow: 0.12, red: 0.35}
+  staff_count_range:
+    green: [60, 220]
+    yellow: [25, 90]
+    red: [3, 35]
+  staff_sufficiency_prob: {green: 0.92, yellow: 0.65, red: 0.25}
+  quality_docs_prob: {green: 0.9, yellow: 0.6, red: 0.25}
+  quality_docs_options:
+    - "Паспорт качества"
+    - "Сертификат соответствия ГОСТ"
+    - "Добровольная сертификация ТР ТС"
+    - "Свидетельство СРО"
+  tax_debt_prob: {green: 0.06, yellow: 0.18, red: 0.45}
+  fssp_debt_prob: {green: 0.05, yellow: 0.2, red: 0.5}
+  open_credit_prob: {green: 0.35, yellow: 0.5, red: 0.55}
+  leasing_prob: {green: 0.25, yellow: 0.35, red: 0.4}
+  executive_debt_prob: {green: 0.04, yellow: 0.12, red: 0.32}
+  in_rnp_prob: {green: 0.01, yellow: 0.05, red: 0.2}
+  director_disqualified_prob: {green: 0.01, yellow: 0.04, red: 0.15}
+  director_nominee_prob: {green: 0.02, yellow: 0.08, red: 0.25}
+  attorney_prob: {green: 0.85, yellow: 0.65, red: 0.35}
+  blocked_accounts_prob: {green: 0.02, yellow: 0.07, red: 0.25}
+  tax_clearance_prob: {green: 0.92, yellow: 0.68, red: 0.35}
+  regulatory_violations_prob: {green: 0.12, yellow: 0.28, red: 0.55}
+  regulatory_violation_examples:
+    - "Нарушение требований пожарной безопасности"
+    - "Нарушение охраны труда"
+    - "Несоблюдение экологических норм"
+  assets_threshold: 15000000
+  gov_contracts:
+    poisson_lambda: {green: 6.0, yellow: 2.5, red: 0.6}
+    amount_range:
+      green: [7000000, 90000000]
+      yellow: [1500000, 35000000]
+      red: [0, 9000000]
+  blocked_banks: ["Сбербанк", "ВТБ", "Альфа-Банк", "Газпромбанк", "Россельхозбанк"]

@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  proxy:
+    build: ./proxy
+    ports:
+      - "8000:8000"
+    depends_on:
+      contract-extractor:
+        condition: service_healthy
+      globas-syntetic:
+        condition: service_healthy
+      legal-ai:
+        condition: service_healthy
+    networks:
+      - backend
+
+  contract-extractor:
+    build: ./services/contract_extractor
+    container_name: contract-extractor
+    expose:
+      - "8080"
+    ports:
+      - "18080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - backend
+
+  globas-syntetic:
+    build: ./services/globas_syntetic
+    container_name: globas-syntetic
+    expose:
+      - "8090"
+    ports:
+      - "18090:8090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - backend
+
+  legal-ai:
+    build: ./services/legal_ai
+    container_name: legal-ai
+    expose:
+      - "8100"
+    ports:
+      - "18100:8100"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8100/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

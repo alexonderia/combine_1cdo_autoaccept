@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: globas
+      POSTGRES_USER: globas
+      POSTGRES_PASSWORD: globas
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  api:
+    build: ./api
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql+psycopg2://globas:globas@db:5432/globas
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config:/app/config:ro
+
+volumes:
+  db_data:
