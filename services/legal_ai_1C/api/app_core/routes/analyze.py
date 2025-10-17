@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, HTTPException
 
@@ -18,8 +18,11 @@ from ..scoring import (
 )
 from ..utils import dedup_sources_by_hash
 from ..report.summary import build_document_overview, summarize_report_block
+from ..logger import get_logger
 
 router = APIRouter()
+
+logger = get_logger(__name__)
 
 DEFAULT_LAW_SUMMARY = (
     "Автоматическая предварительная оценка соответствия законодательству; требуется проверка юристом."
@@ -118,6 +121,7 @@ async def _generate_business_payload(req: AnalyzeRequest) -> Dict[str, Any]:
         try:
             payload = await _call_business_model(req, tokens)
         except Exception:
+            logger.exception("Business model call failed", extra={"tokens": tokens})
             continue
         if _has_all_sections(payload):
             return payload
@@ -215,18 +219,38 @@ async def generate(body: GenerateRequest):
 @router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(req: AnalyzeRequest):
     # 1) RAG — проверка по законодательству
+    diagnostics: Dict[str, Any] = {"rag": {"status": "ok"}, "rerank": {"status": "skipped"}, "overview": {"status": "ok"}}
+
     try:
         ctx = rag_search_ru(req.contract_text, top_k=settings.RAG_TOP_K)
     except Exception:
+        logger.exception("RAG search failed")
         ctx = []
+        diagnostics["rag"] = {
+            "status": "error",
+            "message": "Не удалось выполнить поиск по базе нормативных актов",
+        }
+    else:
+        diagnostics["rag"]["documents"] = len(ctx)
     ctx = dedup_sources_by_hash(ctx)
     # 1.1) rerank
-    try:
-        keep = min(settings.RERANK_KEEP, len(ctx))
-        ctx = apply_rerank(req.contract_text, ctx, keep=keep)
-        ctx = dedup_sources_by_hash(ctx)
-    except Exception as e:
-        print("[RERANK] failed:", e)
+    if ctx and settings.RERANK_ENABLE:
+        try:
+            keep = min(settings.RERANK_KEEP, len(ctx))
+            ctx = apply_rerank(req.contract_text, ctx, keep=keep)
+            ctx = dedup_sources_by_hash(ctx)
+            diagnostics["rerank"] = {"status": "ok", "kept": len(ctx)}
+        except Exception:
+            logger.exception("Rerank failed")
+            diagnostics["rerank"] = {
+                "status": "error",
+                "message": "Реранкинг источников отключён из-за ошибки",
+            }
+    else:
+        diagnostics["rerank"] = {
+            "status": "skipped",
+            "reason": "no_context" if not ctx else "disabled",
+        }
 
     # 2) LLM — юридическая оценка с контекстом RAG
     sys = law_system_prompt(req)
@@ -254,7 +278,12 @@ async def analyze(req: AnalyzeRequest):
             max_tokens=min(req.max_tokens or 600, 600),
         )
     except Exception:
+        logger.exception("Overview generation failed")
         overview_raw = {}
+        diagnostics["overview"] = {
+            "status": "error",
+            "message": "Краткое описание документа не сформировано",
+        }
     overview = build_document_overview(overview_raw)
 
     law_narrative = summarize_report_block(law_report, "Соответствие законодательству")
@@ -284,4 +313,5 @@ async def analyze(req: AnalyzeRequest):
         overview=overview,
         law_narrative=law_narrative,
         business_narrative=business_narrative,
+        diagnostics=diagnostics,
     )
