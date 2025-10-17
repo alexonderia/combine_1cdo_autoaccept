@@ -35,19 +35,19 @@ FlagReranker("BAAI/bge-reranker-v2-m3", use_fp16=False, device="cpu")
 print("reranker cached in image")
 PY
 
-WORKDIR /workspace/backend
+WORKDIR /workspace/api
 
 FROM base AS runtime
 
-WORKDIR /workspace/backend
+WORKDIR /workspace/api
 
 # Устанавливаем лёгкие зависимости, которые могут часто меняться
 COPY requirements.txt /tmp/requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir -r /tmp/requirements.txt
 
-COPY app.py /workspace/backend/app.py
-COPY app_core /workspace/backend/app_core
+COPY app.py /workspace/api/app.py
+COPY app_core /workspace/api/app_core
 
 EXPOSE 8000
 # запуск задаёт compose: command: uvicorn ...

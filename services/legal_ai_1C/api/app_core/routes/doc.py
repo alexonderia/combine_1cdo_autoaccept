@@ -1,12 +1,9 @@
-# backend/app_core/routes/doc.py
+# api/app_core/routes/doc.py
 from __future__ import annotations
-from fastapi import APIRouter, Body, Query
+from fastapi import APIRouter, Body
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
-import httpx, re, os
-
-import anyio
-import contextlib
+import httpx, re
 
 from ..report.render import render_html, save_report_html
 
