@@ -30,18 +30,18 @@ ollama pull qwen2.5:7b-instruct
 ```
 
 ### Чистая сборка с базовым образом
-Если используете разделённую сборку (`backend/Dockerfile.base` + `backend/Dockerfile`):
+Если используете разделённую сборку (`api/Dockerfile.base` + `api/Dockerfile`):
 ```bash
-# базовый образ собираем из каталога backend
-docker build --no-cache -f backend/Dockerfile.base -t legal-ai/backend-base:cu130 backend
-# затем соберём только backend (использует BASE_IMAGE из compose)
-docker compose build --no-cache backend
+# базовый образ собираем из каталога api
+docker build --no-cache -f api/Dockerfile.base -t legal-ai/api-base:cu130 api
+# затем соберём только api (использует BASE_IMAGE из compose)
+docker compose build --no-cache api
 ```
 
 ### Обновление зависимостей
 
-- Лёгкие пакеты: добавьте/обновите в `backend/requirements.txt`, затем выполните `docker compose build backend` и `docker compose up -d backend`.
-- Тяжёлые пакеты (PyTorch, HuggingFace и т.п.): меняем `backend/requirements.base.txt` и пересобираем базовый образ `backend/Dockerfile.base`, после чего пересобираем `backend`.
+- Лёгкие пакеты: добавьте/обновите в `api/requirements.txt`, затем выполните `docker compose build api` и `docker compose up -d api`.
+- Тяжёлые пакеты (PyTorch, HuggingFace и т.п.): меняем `api/requirements.base.txt` и пересобираем базовый образ `api/Dockerfile.base`, после чего пересобираем `api`.
 
 **Поднять стек**
 ```
@@ -52,7 +52,7 @@ docker compose up -d --build
 **Проверки**
 ```
 curl -s http://localhost:8000/health | jq
-docker logs -f backend
+docker logs -f api
 ```
 
 ## 3) Кэширование весов (HF cache)
@@ -61,7 +61,7 @@ docker logs -f backend
 ```
 # docker-compose.yml
 services:
-  backend:
+  api:
     volumes:
       - ./.hf_cache:/root/.cache/huggingface
 ```
@@ -69,7 +69,7 @@ services:
 ```
 mkdir -p .hf_cache
 docker run --rm -v "$PWD/.hf_cache:/root/.cache/huggingface" \
-  legal-ai/backend:dev \
+  legal-ai/api:dev \
   python - <<'PY'
 from FlagEmbedding import FlagReranker
 FlagReranker("BAAI/bge-reranker-v2-m3", use_fp16=False, device="cpu")
@@ -80,8 +80,9 @@ PY
 
 ## 3.1 Сеть и фоллбэк HTTPS→HTTP
 В некоторых средах HTTPS из контейнера может быть недоступен. Для диагностики:
-```bash 
-curl -s "http://localhost:8000/net/check?url=https://publication.pravo.gov.ru/" | jq +curl -s "http://localhost:8000/net/check?url=http://publication.pravo.gov.ru/" | jq +``] 
+```bash
+curl -s "http://localhost:8000/net/check?url=https://publication.pravo.gov.ru/" | jq
+curl -s "http://localhost:8000/net/check?url=http://publication.pravo.gov.ru/" | jq
 ```
 Онлайн-ингест поддерживает автоматический даунгрейд: 
 ```bash
@@ -113,7 +114,7 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --log-level info
 - Для онлайн-ингеста используйте /rag/fetch_ingest_publication_batch и concurrency.
 
 ## 6) Безопасность
-- Запускать backend в частной сети Docker; наружу публиковать только 8000 (или за обратным прокси).
+- Запускать api в частной сети Docker; наружу публиковать только 8000 (или за обратным прокси).
 - По желанию: включить простую аутентификацию/токен в прокси (Nginx/Traefik).
 - CORS — ограничить домены фронта.
 - Логи — не сохранять текст договоров дольше необходимого.
@@ -130,7 +131,7 @@ uvicorn app:app --host 0.0.0.0 --port 8000 --log-level info
 
 - /health — быстрый статус.
 
-- docker logs -f backend — трассировка старта и запросов.
+- docker logs -f api — трассировка старта и запросов.
 
 - Если «висит» первый /analyze — проверьте прогрев HF-кэша реранкера.
 

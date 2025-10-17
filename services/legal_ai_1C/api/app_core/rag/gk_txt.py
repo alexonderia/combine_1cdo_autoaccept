@@ -1,4 +1,4 @@
-# backend/app_core/rag/gk_txt.py
+# api/app_core/rag/gk_txt.py
 from __future__ import annotations
 import re
 from typing import List, Optional, Tuple
