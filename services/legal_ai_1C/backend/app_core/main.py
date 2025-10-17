@@ -1,17 +1,5 @@
-from fastapi import FastAPI
-from .routes.health import router as health_router
-from .routes.ingest import router as ingest_router
-from .routes.analyze import router as analyze_router
-from .routes.connectivity import router as net_router
-from .routes.doc import router as doc_router
-from .startup import register_startup
+"""Точка входа FastAPI-приложения Legal AI."""
 
-def create_app() -> FastAPI:
-    app = FastAPI(title="Legal AI Backend", version="0.5.0")
-    app.include_router(health_router)
-    app.include_router(ingest_router)
-    app.include_router(analyze_router)
-    app.include_router(net_router)
-    app.include_router(doc_router) 
-    register_startup(app)  # лёгкие startup-проверки
-    return app
+from .application import create_app
+
+app = create_app()

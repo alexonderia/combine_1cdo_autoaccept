@@ -75,6 +75,13 @@ curl -X POST http://localhost:8000/legal-ai/analyze \
   -d '{"text": "The supplier may impose a penalty for late payments. The buyer has no unilateral termination rights."}'
 ```
 
+## Документация
+
+* [Архитектура сервисов](docs/architecture.md) — обзор общих принципов.
+* [Contract Extractor](docs/contract_extractor.md) — подробности по сервису извлечения.
+* [Globas API](docs/globas.md) — описание проверки контрагентов.
+* [Legal AI Backend](docs/legal_ai.md) — сведения о сервисе юридического анализа.
+
 ## Работа с отдельными сервисами
 
 Команды Makefile проксируют аргументы в `docker compose` и позволяют управлять отдельными контейнерами:

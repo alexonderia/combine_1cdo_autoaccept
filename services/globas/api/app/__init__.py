@@ -1,4 +1,4 @@
-"""Пакет ядра приложения Legal AI."""
+"""Пакет FastAPI-приложения сервиса Globas."""
 
 from .application import AppContainer, build_container, create_app
 
