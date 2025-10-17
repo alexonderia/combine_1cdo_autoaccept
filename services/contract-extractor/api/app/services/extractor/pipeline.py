@@ -3,6 +3,7 @@ from .rules import RuleBasedExtractor
 from .llm import LLMExtractor
 from app.core.validator import SchemaValidator
 from app.core.config import CONFIG
+from app.core.logger import get_logger
 from app.core.field_settings import FieldSettings
 from ..warnings import WarningItem
 from ..normalize import normalize_whitespace
@@ -11,6 +12,25 @@ from ..summary import (
     build_short_summary,
     clamp_summary_text,
 )
+
+logger = get_logger(__name__)
+
+
+def _coerce_float(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip().replace(" ", "")
+    if not text:
+        return None
+    text = text.replace(",", ".")
+    try:
+        return float(text)
+    except ValueError:
+        logger.debug("Unable to convert %r to float", value)
+        return None
+
 
 class ExtractionPipeline:
     def __init__(
@@ -79,7 +99,14 @@ class ExtractionPipeline:
         if self.summary_llm is not None:
             try:
                 summary_payload = await self.summary_llm.extract(cleaned_text, {})
-            except Exception:
+            except Exception:  # noqa: BLE001
+                logger.exception("Summary extractor failed")
+                warnings.append(
+                    WarningItem(
+                        code="summary_llm_error",
+                        message="Не удалось получить краткое содержание из модели; возвращены правила",
+                    )
+                )
                 summary_payload = {}
             candidate_summary = (
                 summary_payload.get("КраткоеСодержание")
@@ -210,16 +237,27 @@ class ExtractionPipeline:
             filtered_data["ОбоснованиеВыбора"] = rationale_text
 
         # 4) Дополнительные предупреждения (пример: расхождение НДС)
-        try:
-            vat = float(data.get("СуммаНДС")) if data.get("СуммаНДС") is not None else None
-            total = float(data.get("Сумма")) if data.get("Сумма") is not None else None
-            rate = float(data.get("СтавкаНДС")) if data.get("СтавкаНДС") is not None else None
-            if vat is not None and total is not None and rate is not None and rate > 0:
-                expected_vat = round(total * rate / (100 + rate), 2)
-                if abs(expected_vat - vat) > 0.1:
-                    warnings.append(WarningItem(code="vat_mismatch", message=f"НДС в документе {vat}, расчётное значение {expected_vat} при ставке {rate}%"))
-        except Exception:
-            pass
+        vat = _coerce_float(data.get("СуммаНДС"))
+        total = _coerce_float(data.get("Сумма"))
+        rate = _coerce_float(data.get("СтавкаНДС"))
+        if vat is not None and total is not None and rate is not None and rate > 0:
+            expected_vat = round(total * rate / (100 + rate), 2)
+            if abs(expected_vat - vat) > CONFIG.numeric_tolerance:
+                warnings.append(
+                    WarningItem(
+                        code="vat_mismatch",
+                        message=(
+                            f"НДС в документе {vat}, расчётное значение {expected_vat} при ставке {rate}%"
+                        ),
+                    )
+                )
+        elif any(value is None for value in (vat, total, rate)):
+            logger.debug(
+                "VAT consistency check skipped due to missing or invalid numbers: vat=%r total=%r rate=%r",
+                data.get("СуммаНДС"),
+                data.get("Сумма"),
+                data.get("СтавкаНДС"),
+            )
 
         debug = {
             "disabled_fields": ", ".join(sorted(self.field_settings.disabled_fields())),

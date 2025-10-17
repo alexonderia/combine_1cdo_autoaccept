@@ -6,6 +6,11 @@ from typing import Any, Dict
 
 import yaml
 
+from .logger import get_logger
+
+
+logger = get_logger(__name__)
+
 
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config" / "settings.yaml"
@@ -21,14 +26,56 @@ def _load_config() -> Dict[str, Any]:
     return {}
 
 
-def _to_bool(value: Any) -> bool:
+def _to_bool(value: Any, *, name: str | None = None, default: bool = False) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, (int, float)):
         return bool(value)
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "y", "on"}
-    return False
+    if name:
+        logger.warning("Invalid boolean value for %s=%r; using %s", name, value, default)
+    return default
+
+
+def _safe_int(value: Any, default: int, name: str, *, minimum: int | None = None) -> int:
+    if value is None:
+        return default
+    try:
+        parsed = int(str(value))
+    except (TypeError, ValueError):
+        logger.warning("Invalid integer for %s=%r; using %s", name, value, default)
+        return default
+    if minimum is not None and parsed < minimum:
+        logger.warning(
+            "Value for %s=%r is below minimum %s; using %s",
+            name,
+            parsed,
+            minimum,
+            default,
+        )
+        return default
+    return parsed
+
+
+def _safe_float(value: Any, default: float, name: str, *, minimum: float | None = None) -> float:
+    if value is None:
+        return default
+    try:
+        parsed = float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        logger.warning("Invalid float for %s=%r; using %s", name, value, default)
+        return default
+    if minimum is not None and parsed < minimum:
+        logger.warning(
+            "Value for %s=%r is below minimum %s; using %s",
+            name,
+            parsed,
+            minimum,
+            default,
+        )
+        return default
+    return parsed
 
 
 class Settings:
@@ -51,48 +98,70 @@ class Settings:
         self.QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION") or rag_cfg.get("collection", "ru_law_m3")
         self.EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL") or rag_cfg.get("embedding_model", "BAAI/bge-m3")
         self.EMBED_DEVICE = os.getenv("EMBED_DEVICE") or rag_cfg.get("embed_device", "auto")
-        rag_top_k_env = os.getenv("RAG_TOP_K")
-        self.RAG_TOP_K = int(rag_top_k_env) if rag_top_k_env is not None else int(rag_cfg.get("top_k", 8))
+        rag_top_k_raw = os.getenv("RAG_TOP_K", rag_cfg.get("top_k", 8))
+        self.RAG_TOP_K = _safe_int(rag_top_k_raw, 8, "RAG_TOP_K", minimum=1)
 
         # Reranker
         rerank_enable_env = os.getenv("RERANK_ENABLE")
         rerank_debug_env = os.getenv("RERANK_DEBUG")
-        self.RERANK_ENABLE = _to_bool(rerank_enable_env if rerank_enable_env is not None else rerank_cfg.get("enable", True))
+        self.RERANK_ENABLE = _to_bool(
+            rerank_enable_env if rerank_enable_env is not None else rerank_cfg.get("enable", True),
+            name="RERANK_ENABLE",
+            default=True,
+        )
         self.RERANKER_MODEL = os.getenv("RERANKER_MODEL") or rerank_cfg.get("model", "BAAI/bge-reranker-v2-m3")
         self.RERANK_DEVICE = os.getenv("RERANK_DEVICE") or rerank_cfg.get("device", "auto")
-        rerank_keep_env = os.getenv("RERANK_KEEP")
-        self.RERANK_KEEP = int(rerank_keep_env) if rerank_keep_env is not None else int(rerank_cfg.get("keep", 5))
-        rerank_batch_env = os.getenv("RERANK_BATCH")
-        self.RERANK_BATCH = int(rerank_batch_env) if rerank_batch_env is not None else int(rerank_cfg.get("batch", 16))
-        self.RERANK_DEBUG = _to_bool(rerank_debug_env if rerank_debug_env is not None else rerank_cfg.get("debug", False))
+        rerank_keep_raw = os.getenv("RERANK_KEEP", rerank_cfg.get("keep", 5))
+        self.RERANK_KEEP = _safe_int(rerank_keep_raw, 5, "RERANK_KEEP", minimum=1)
+        rerank_batch_raw = os.getenv("RERANK_BATCH", rerank_cfg.get("batch", 16))
+        self.RERANK_BATCH = _safe_int(rerank_batch_raw, 16, "RERANK_BATCH", minimum=1)
+        self.RERANK_DEBUG = _to_bool(
+            rerank_debug_env if rerank_debug_env is not None else rerank_cfg.get("debug", False),
+            name="RERANK_DEBUG",
+            default=False,
+        )
 
         # Startup flags
         startup_checks_env = os.getenv("STARTUP_CHECKS")
-        self.STARTUP_CHECKS = _to_bool(startup_checks_env if startup_checks_env is not None else startup_cfg.get("checks", True))
-        self_check_timeout_env = os.getenv("SELF_CHECK_TIMEOUT")
-        self.SELF_CHECK_TIMEOUT = int(self_check_timeout_env) if self_check_timeout_env is not None else int(startup_cfg.get("self_check_timeout", 5))
+        self.STARTUP_CHECKS = _to_bool(
+            startup_checks_env if startup_checks_env is not None else startup_cfg.get("checks", True),
+            name="STARTUP_CHECKS",
+            default=True,
+        )
+        self_check_timeout_raw = os.getenv("SELF_CHECK_TIMEOUT", startup_cfg.get("self_check_timeout", 5))
+        self.SELF_CHECK_TIMEOUT = _safe_int(self_check_timeout_raw, 5, "SELF_CHECK_TIMEOUT", minimum=1)
         self_check_gen_env = os.getenv("SELF_CHECK_GEN")
-        self.SELF_CHECK_GEN = _to_bool(self_check_gen_env if self_check_gen_env is not None else startup_cfg.get("self_check_gen", False))
+        self.SELF_CHECK_GEN = _to_bool(
+            self_check_gen_env if self_check_gen_env is not None else startup_cfg.get("self_check_gen", False),
+            name="SELF_CHECK_GEN",
+            default=False,
+        )
         startup_cuda_env = os.getenv("STARTUP_CUDA_NAME")
-        self.STARTUP_CUDA_NAME = _to_bool(startup_cuda_env if startup_cuda_env is not None else startup_cfg.get("cuda_name", False))
+        self.STARTUP_CUDA_NAME = _to_bool(
+            startup_cuda_env if startup_cuda_env is not None else startup_cfg.get("cuda_name", False),
+            name="STARTUP_CUDA_NAME",
+            default=False,
+        )
 
         # Scoring / UI
         self.SCORING_MODE = os.getenv("SCORING_MODE") or scoring_cfg.get("mode", "strict")
-        score_green_env = os.getenv("SCORE_GREEN")
-        self.SCORE_GREEN = int(score_green_env) if score_green_env is not None else int(scoring_cfg.get("score_green", 75))
-        score_yellow_env = os.getenv("SCORE_YELLOW")
-        self.SCORE_YELLOW = int(score_yellow_env) if score_yellow_env is not None else int(scoring_cfg.get("score_yellow", 51))
-        business_max_tokens_env = os.getenv("BUSINESS_MAX_TOKENS")
-        self.BUSINESS_MAX_TOKENS = (
-            int(business_max_tokens_env)
-            if business_max_tokens_env is not None
-            else int(scoring_cfg.get("business_max_tokens", 1400))
+        score_green_raw = os.getenv("SCORE_GREEN", scoring_cfg.get("score_green", 75))
+        self.SCORE_GREEN = _safe_int(score_green_raw, 75, "SCORE_GREEN", minimum=1)
+        score_yellow_raw = os.getenv("SCORE_YELLOW", scoring_cfg.get("score_yellow", 51))
+        self.SCORE_YELLOW = _safe_int(score_yellow_raw, 51, "SCORE_YELLOW", minimum=1)
+        business_max_tokens_raw = os.getenv("BUSINESS_MAX_TOKENS", scoring_cfg.get("business_max_tokens", 1400))
+        self.BUSINESS_MAX_TOKENS = _safe_int(
+            business_max_tokens_raw,
+            1400,
+            "BUSINESS_MAX_TOKENS",
+            minimum=128,
         )
-        business_retry_env = os.getenv("BUSINESS_RETRY_STEP")
-        self.BUSINESS_RETRY_STEP = (
-            int(business_retry_env)
-            if business_retry_env is not None
-            else int(scoring_cfg.get("business_retry_step", 400))
+        business_retry_raw = os.getenv("BUSINESS_RETRY_STEP", scoring_cfg.get("business_retry_step", 400))
+        self.BUSINESS_RETRY_STEP = _safe_int(
+            business_retry_raw,
+            400,
+            "BUSINESS_RETRY_STEP",
+            minimum=32,
         )
 
         # Prompts configuration
