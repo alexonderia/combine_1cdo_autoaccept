@@ -8,11 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # === PyTorch NIGHTLY с поддержкой Blackwell (sm_120) ===
 # Вариант А (CUDA 13.0):
-RUN pip install --pre --index-url https://download.pytorch.org/whl/nightly/cu130 \
-    torch torchvision torchaudio
-# Если вдруг колёса cu130 недоступны в момент сборки, используйте вариант Б:
-# RUN pip install --pre --index-url https://download.pytorch.org/whl/nightly/cu128 \
+# RUN pip install --pre --index-url https://download.pytorch.org/whl/nightly/cu130 \
 #     torch torchvision torchaudio
+# Если вдруг колёса cu130 недоступны в момент сборки, используйте вариант Б:
+RUN pip install --pre --index-url https://download.pytorch.org/whl/nightly/cu128 \
+    torch torchvision torchaudio
 
 # Прочие тяжёлые зависимости, которые хотим кешировать в базовом слое
 COPY requirements.base.txt /tmp/requirements.base.txt
@@ -21,6 +21,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Прогрев кэша эмбеддера (оставляем как было)
 ENV HF_HOME=/root/.cache/huggingface
+
 RUN python - <<'PY'
 from sentence_transformers import SentenceTransformer
 m = SentenceTransformer("BAAI/bge-m3")

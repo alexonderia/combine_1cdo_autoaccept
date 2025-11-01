@@ -1,0 +1,30 @@
+version: "3.9"
+
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
+  
+services:
+  admin-panel:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: admin-panel
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      BACKEND_PORT: 8001
+      SERVICES_URL: http://proxy:8000        # если идём через Nginx
+      CONTRACT_EXTRACTOR_URL: http://contract-extractor:8080
+      GLOBAS_API_URL: http://globas-api:8000
+      LEGAL_AI_URL: http://legal-ai:8000  # если подключаешься к общему стеку сервисов
+    networks:
+      - backend
+    
+networks:
+  backend:
+    external: true

@@ -1,0 +1,26 @@
+# ---------- Этап 1: Сборка фронтенда ----------
+FROM node:20 AS frontend-build
+WORKDIR /frontend
+# Копируем package.json и lock-файл для кеша зависимостей
+COPY frontend/package*.json ./
+RUN npm install
+# Копируем исходники фронта
+COPY frontend/ .
+# Собираем проект
+RUN npm run build
+
+
+# ---------- Этап 2: Сборка бэкенда ----------
+FROM python:3.11-slim AS backend
+WORKDIR /app
+# Копируем бэкенд
+COPY backend/ /app/
+# Копируем собранный фронтенд из предыдущего шага
+COPY --from=frontend-build /frontend/dist /app/static
+
+# Устанавливаем зависимости Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+
+# Запуск приложения
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]

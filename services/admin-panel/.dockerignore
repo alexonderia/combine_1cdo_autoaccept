@@ -1,0 +1,10 @@
+**/__pycache__/
+**/.pytest_cache/
+node_modules/
+frontend/node_modules/
+.env
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+README.md

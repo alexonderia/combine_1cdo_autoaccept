@@ -175,6 +175,23 @@ services:
     networks:
       - backend
 
+  admin-panel:
+    build:
+      context: ./services/admin-panel
+      dockerfile: backend/Dockerfile
+    container_name: admin-panel
+    ports:
+      - "8001:8001"
+    environment:
+      BACKEND_PORT: 8001
+      SERVICES_URL: http://proxy:8000        # если идём через Nginx
+      CONTRACT_EXTRACTOR_URL: http://contract-extractor:8080
+      GLOBAS_API_URL: http://globas-api:8000
+      LEGAL_AI_URL: http://legal-ai:8000
+    networks:
+      - backend
+   
+
 networks:
   backend:
     driver: bridge
