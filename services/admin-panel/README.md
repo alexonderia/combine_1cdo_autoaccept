@@ -3,6 +3,8 @@
 frontend = React + TypeScript + Vite
 backend = FastAPI
 
+Подробная архитектура и описание функционала доступны в [docs/admin_panel.md](../../docs/admin_panel.md).
+
 ## Запуск локально
 
 1. Из директории ../admin-panel/frontend

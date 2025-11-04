@@ -2,13 +2,14 @@ import { API_ROUTES } from './routes';
 
 /** Error that contains HTTP status code and message. */
 export class HttpError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-    public readonly url: string,
-  ) {
+  public readonly status: number;
+  public readonly url: string;
+
+  constructor(message: string, status: number, url: string) {
     super(message);
     this.name = 'HttpError';
+    this.status = status;
+    this.url = url;
   }
 }
 

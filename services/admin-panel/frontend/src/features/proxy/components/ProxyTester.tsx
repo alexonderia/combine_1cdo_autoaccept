@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { sendProxyFileRequest, sendProxyJsonRequest, type ProxyJsonRequest, type ProxyResponse } from '../api';
 
+function isErrorResult(value: ProxyResponse | { error: string }): value is { error: string } {
+  return typeof (value as { error?: unknown }).error === 'string';
+}
+
 const DEFAULT_JSON_REQUEST: ProxyJsonRequest = {
   service: 'contract-extractor',
   method: 'GET',
@@ -116,7 +120,7 @@ export function ProxyTester() {
         <div className="result">
           <h3>Результат:</h3>
 
-          {'error' in result ? (
+          {isErrorResult(result) ?(
             <div className="error">❌ {result.error}</div>
           ) : (
             <>
