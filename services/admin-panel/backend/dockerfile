@@ -7,7 +7,8 @@ RUN npm install
 # Копируем исходники фронта
 COPY frontend/ .
 # Собираем проект
-RUN npm run build
+RUN BUILD_ENV=docker npm run build
+
 
 
 # ---------- Этап 2: Сборка бэкенда ----------

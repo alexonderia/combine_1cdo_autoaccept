@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
+const isDocker = process.env.BUILD_ENV === "docker";
+
 export default defineConfig({
   plugins: [react()],
   base: "/",
@@ -13,9 +15,9 @@ export default defineConfig({
   },
   build: {
     emptyOutDir: true,
-    outDir: "../backend/static", // <-- сюда попадёт собранный фронтенд
-    
+    outDir: isDocker ? "dist" : "../backend/static",
   },
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -6,6 +6,7 @@
   "scripts": {
     "start": "vite",
     "build": "tsc -b && vite build",
+    "build:local": "tsc -b && vite build --outDir ../backend/static",
     "lint": "eslint .",
     "preview": "vite preview"
   },
