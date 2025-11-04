@@ -1,34 +1,40 @@
-"""Конфигурация админ-панели для локального запуска."""
+"""Конфигурация админ-панели."""
 
-from pydantic import BaseModel
-from typing import Dict, Any
-import os
+from __future__ import annotations
 
-class Settings(BaseModel):
-    # URLs сервисов для локального запуска
-    # contract_extractor_url: str = "http://localhost:18080"
-    # globas_api_url: str = "http://localhost:18090"
-    # legal_ai_url: str = "http://localhost:18100"
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-    # URLs сервисов для запуска через Docker
-    contract_extractor_url: str = "http://contract-extractor:8080"
-    globas_api_url: str = "http://globas-api:8000"
-    legal_ai_url: str = "http://legal-ai:8000"
-    
-    # SERVICES_URL: http://proxy:8000        # если идём через Nginx
-    # CONTRACT_EXTRACTOR_URL: http://contract-extractor:8080
-    # GLOBAS_API_URL: http://globas-api:8000
-    # LEGAL_AI_URL: http://legal-ai:8000
-    # # Пути к промптам для локального запуска
-    # contract_extractor_prompts_path: str = "./prompts/contract-extractor"
-    # legal_ai_prompts_path: str = "./prompts/legal-ai"
-    
-    # Настройки приложения
-    app_name: str = "Admin Panel (Local)"
-    version: str = "1.0.0"
-    debug: bool = os.getenv("DEBUG", "true").lower() == "true"
-    
-    # Порт для локального запуска
-    port: int = int(os.getenv("PORT", "8001"))
+
+class Settings(BaseSettings):
+    """Настройки приложения FastAPI."""
+
+    contract_extractor_url: str = Field(
+        default="http://contract-extractor:8080",
+        alias="CONTRACT_EXTRACTOR_URL",
+        description="Базовый URL сервиса Contract Extractor",
+    )
+    globas_api_url: str = Field(
+        default="http://globas-api:8000",
+        alias="GLOBAS_API_URL",
+        description="Базовый URL сервиса Globas API",
+    )
+    legal_ai_url: str = Field(
+        default="http://legal-ai:8000",
+        alias="LEGAL_AI_URL",
+        description="Базовый URL сервиса Legal AI",
+    )
+
+    app_name: str = Field(default="Admin Panel (Local)")
+    version: str = Field(default="1.0.0")
+    debug: bool = Field(default=True, alias="DEBUG")
+    port: int = Field(default=8001, alias="PORT")
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
 
 settings = Settings()
