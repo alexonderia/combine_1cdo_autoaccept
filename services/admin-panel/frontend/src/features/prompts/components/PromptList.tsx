@@ -1,13 +1,14 @@
-import type { PromptService } from "../models/types";
+import type { PromptService } from '../../../core/types';
 
-type Props = {
+export interface PromptListProps {
   promptServices: PromptService[];
   onEdit: (service: string, name: string, content: string) => void;
-};
+}
 
-export const Prompts = ({ promptServices, onEdit }: Props) => {
-  
-
+/**
+ * Renders a list of prompt files grouped by service.
+ */
+export function PromptList({ promptServices, onEdit }: PromptListProps) {
   return (
     <div className="card">
       <h2>Управление промптами</h2>
@@ -20,9 +21,8 @@ export const Prompts = ({ promptServices, onEdit }: Props) => {
                 <span className="prompt-name">{prompt.name}</span>
                 <button
                   className="btn-link"
-                  onClick={() =>
-                    onEdit(service.name, prompt.name, prompt.content)
-                  }
+                  onClick={() => onEdit(service.name, prompt.name, prompt.content)}
+                  type="button"
                 >
                   Редактировать
                 </button>

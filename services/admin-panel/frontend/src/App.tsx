@@ -1,101 +1,80 @@
+import { useCallback, useState } from 'react';
+import { AppHeader } from './components/layout/AppHeader';
+import { Modal } from './components/ui/Modal';
+import { useLazyResource } from './core/hooks/useLazyResource';
+import type { ConfigService, PromptDraft, PromptService, Service } from './core/types';
+import { ConfigPanel } from './features/config/components/ConfigPanel';
+import { fetchConfigServices } from './features/config/api';
+import { PromptList } from './features/prompts/components/PromptList';
+import { fetchPromptServices, updatePrompt } from './features/prompts/api';
+import { ProxyTester } from './features/proxy/components/ProxyTester';
+import { ServiceStatusPanel } from './features/services/components/ServiceStatusPanel';
+import { fetchServiceStatus } from './features/services/api';
+import type { TabKey } from './types/tabs';
 
-import { Header } from './components/Header'
-import { useEffect, useState } from 'react';
-import { fetchConfig, fetchPrompts, fetchServices, updatePrompt } from './api';
-import type { Service, PromptService, ConfigService} from './models/types';
-import { Services } from './components/Services';
-import { Prompts } from './components/Prompts';
-import { Config } from './components/Config';
-import { Modal } from './components/Modal';
-import { ProxyTester } from './components/ProxyTester';
+const DEFAULT_PROMPTS: PromptService[] = [];
+const DEFAULT_SERVICES: Service[] = [];
+const DEFAULT_CONFIG: ConfigService[] = [];
 
 function App() {
-  const [currentTab, setCurrentTab] = useState<"services" | "prompts" | "config" | "proxyTester">("services");
-  const [services, setServices] = useState<Service[]>([]);
-  const [configServices, setConfigServices] = useState<ConfigService[]>([]);
-  const [promptServices, setPromptServices] = useState<PromptService[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [editingPrompt, setEditingPrompt] = useState<{
-    service: string;
-    name: string;
-    content: string;
-  } | null>(null);
-  const loadData = async () => {
-    try {
-      const srv = await fetchServices();
-      setServices(srv);
-    } catch (err) {
-      console.error("Ошибка загрузки данных:", err);
-    }
-  };
+  const [currentTab, setCurrentTab] = useState<TabKey>('services');
+  const [editingPrompt, setEditingPrompt] = useState<PromptDraft | null>(null);
+  const [isModalOpen, setModalOpen] = useState(false);
 
-  const loadPrompts = async () => {
-    try {
-      const data = await fetchPrompts();
-      setPromptServices(data);
-    } catch (err) {
-      console.error("Ошибка загрузки промптов:", err);
-    }
-  };
+  const servicesResource = useLazyResource(fetchServiceStatus, {
+    initialValue: DEFAULT_SERVICES,
+    isActive: currentTab === 'services',
+  });
 
-  const loadConfig = async () => {
-    try {
-      const data = await fetchConfig();
-      setConfigServices(data);
-    } catch (err) {
-      console.error("Ошибка загрузки конфигурации:", err);
-    }
-  };
+  const promptResource = useLazyResource(fetchPromptServices, {
+    initialValue: DEFAULT_PROMPTS,
+    isActive: currentTab === 'prompts',
+  });
 
+  const configResource = useLazyResource(fetchConfigServices, {
+    initialValue: DEFAULT_CONFIG,
+    isActive: currentTab === 'config',
+  });
 
-  useEffect(() => {
-    if (currentTab === "services") loadData();
-    if (currentTab === "prompts") loadPrompts();
-    if (currentTab === "config") loadConfig();
-  }, [currentTab]);
-
-  const handleEditPrompt = (service: string, name: string, content: string) => {
+  const handleEditPrompt = useCallback((service: string, name: string, content: string) => {
     setEditingPrompt({ service, name, content });
-    setShowModal(true);
-  };
+    setModalOpen(true);
+  }, []);
 
-  const handleSavePrompt = async () => {
+  const handleSavePrompt = useCallback(async () => {
     if (!editingPrompt) return;
-    const ok = await updatePrompt(editingPrompt);
-    if (ok) {
-      
-      alert("Промт успешно обновлен");
-      setShowModal(false);
-      loadPrompts(); // обновляем список промтов
-    } else {
-      alert("Ошибка при сохранении промта");
-    }
-  };
+
+    await updatePrompt(editingPrompt);
+    await promptResource.refresh();
+    setModalOpen(false);
+  }, [editingPrompt, promptResource]);
 
   return (
     <>
-      <Header currentTab={currentTab} setCurrentTab={setCurrentTab} />
+      <AppHeader currentTab={currentTab} onChangeTab={setCurrentTab} />
       <main className="main-content">
-        {currentTab === "services" && (
-          <Services services={services} onRefresh={loadData} />
+        {currentTab === 'services' && (
+          <ServiceStatusPanel
+            services={servicesResource.data}
+            onRefresh={servicesResource.refresh}
+            loading={servicesResource.loading}
+          />
         )}
-        {currentTab === "prompts" && (
-          <Prompts promptServices={promptServices} onEdit={handleEditPrompt} />
+        {currentTab === 'prompts' && (
+          <PromptList promptServices={promptResource.data} onEdit={handleEditPrompt} />
         )}
-        {currentTab === "config" && (
-          <Config configServices={configServices} onRefresh={loadConfig} />
+        {currentTab === 'config' && (
+          <ConfigPanel
+            configServices={configResource.data}
+            onRefresh={configResource.refresh}
+            loading={configResource.loading}
+          />
         )}
-        {currentTab === "proxyTester" && (
-          <ProxyTester />
-        )}
+        {currentTab === 'proxyTester' && <ProxyTester />}
       </main>
 
-      {showModal && editingPrompt && (
-        <Modal
-          title="Редактирование промпта"
-          onClose={() => setShowModal(false)}
-          onSave={handleSavePrompt}
-        >
+      {isModalOpen && editingPrompt && (
+        <Modal title="Редактирование промпта" onClose={() => setModalOpen(false)} onSave={handleSavePrompt}>
           <p>
             <strong>Сервис:</strong> {editingPrompt.service}
           </p>
@@ -104,14 +83,12 @@ function App() {
           </p>
           <textarea
             value={editingPrompt.content}
-            onChange={(e) =>
-              setEditingPrompt({ ...editingPrompt, content: e.target.value })
-            }
+            onChange={(event) => setEditingPrompt({ ...editingPrompt, content: event.target.value })}
           />
         </Modal>
       )}
     </>
-  )
+  );
 }
 
-export default App
+export default App;
