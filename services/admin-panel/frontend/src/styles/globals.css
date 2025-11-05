@@ -343,6 +343,20 @@ body {
     font-size: 0.875rem;
 }
 
+.payload-mode {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.payload-mode label {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+}
+
 .btn-primary.form {
     margin: 0.25rem 0;
 }

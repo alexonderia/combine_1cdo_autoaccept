@@ -65,6 +65,10 @@ async def proxy_request(req: Request) -> Dict[str, Any]:
             if method.upper() == "POST":
                 if files:
                     response = await client.post(url, data=body or {}, files=files)
+                    request_kwargs: Dict[str, Any] = {"files": files}
+                    if body:
+                        request_kwargs["data"] = body
+                    response = await client.post(url, **request_kwargs)
                 else:
                     response = await client.post(url, json=body)
             elif method.upper() == "GET":
