@@ -2,9 +2,11 @@ import { API_ROUTES, requestJson } from '../../core/api/client';
 
 export interface ProxyJsonRequest {
   service: string;
-  method: string;
+  method: 'GET' | 'POST';
   endpoint: string;
+  params?: Record<string, unknown>;
   body?: unknown;
+  contentType?: string;
 }
 
 export type ProxyResponse = {
@@ -21,13 +23,5 @@ export function sendProxyJsonRequest(request: ProxyJsonRequest): Promise<ProxyRe
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
-  });
-}
-
-/** Sends a file payload through the proxy endpoint. */
-export function sendProxyFileRequest(form: FormData): Promise<ProxyResponse> {
-  return requestJson<ProxyResponse>(API_ROUTES.proxy, {
-    method: 'POST',
-    body: form,
   });
 }

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Настройки приложения FastAPI."""
 
     contract_extractor_url: str = Field(
-        default="http://contract-extractor:8080",
+        default="http://contract-extractor-api:8080",
         alias="CONTRACT_EXTRACTOR_URL",
         description="Базовый URL сервиса Contract Extractor",
     )

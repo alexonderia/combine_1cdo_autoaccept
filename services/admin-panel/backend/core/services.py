@@ -93,7 +93,7 @@ def get_service_url(service_key: str) -> Optional[str]:
 
 async def fetch_service_health(
     service: ServiceDefinition,
-    endpoint: str = "/health",
+    endpoint: str = "/healthz",
     timeout: float = DEFAULT_TIMEOUT,
 ) -> ServiceStatus:
     """Запрашивает состояние одного сервиса."""
@@ -132,7 +132,7 @@ async def fetch_service_health(
 
 async def fetch_all_services_health(
     services: Iterable[ServiceDefinition] = SERVICE_REGISTRY,
-    endpoint: str = "/health",
+    endpoint: str = "/healthz",
     timeout: float = DEFAULT_TIMEOUT,
 ) -> List[ServiceStatus]:
     """Проверяет состояние всех указанных сервисов."""

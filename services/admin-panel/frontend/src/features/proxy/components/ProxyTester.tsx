@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { sendProxyFileRequest, sendProxyJsonRequest, type ProxyJsonRequest, type ProxyResponse } from '../api';
+import { useState } from 'react';
+import { sendProxyJsonRequest, type ProxyJsonRequest, type ProxyResponse } from '../api';
 
 function isErrorResult(value: ProxyResponse | { error: string }): value is { error: string } {
   return typeof (value as { error?: unknown }).error === 'string';
@@ -7,8 +7,8 @@ function isErrorResult(value: ProxyResponse | { error: string }): value is { err
 
 const DEFAULT_JSON_REQUEST: ProxyJsonRequest = {
   service: 'contract-extractor',
-  method: 'POST',
-  endpoint: 'check',
+  method: 'GET',
+  endpoint: 'status',
 };
 
 type PayloadType = 'json' | 'plain-text';
@@ -17,86 +17,70 @@ type PayloadType = 'json' | 'plain-text';
  */
 export function ProxyTester() {
   const [request, setRequest] = useState<ProxyJsonRequest>(DEFAULT_JSON_REQUEST);
-  const [payload, setPayload] = useState('');
-  const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ProxyResponse | { error: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [payload, setPayload] = useState('');
   const [payloadType, setPayloadType] = useState<PayloadType>('plain-text');
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleChange = (patch: Partial<ProxyJsonRequest>) => {
     setRequest((current) => ({ ...current, ...patch }));
-
-    if (patch.method && patch.method !== 'POST') {
-      setFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+    if (patch.method && patch.method === 'GET') {
+      setPayload('');
+      setPayloadType('plain-text');
     }
   };
-
-  const resetInputs = () => {
-    // setPayload('');
-    setFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
 
   const handleSend = async () => {
     setResult(null);
     setLoading(true);
 
     try {
-      if (file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('service', request.service);
-        formData.append('method', request.method);
-        formData.append('endpoint', request.endpoint);
-        const response = await sendProxyFileRequest(formData);
-        setResult(response);
-      } else {
-        resetInputs();
-        return;
+      let params: Record<string, unknown> | undefined;
+      const trimmedQuery = query.trim();
+
+      if (trimmedQuery) {
+        try {
+          const parsed = JSON.parse(trimmedQuery) as unknown;
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            params = parsed as Record<string, unknown>;
+          } else {
+            setResult({ error: 'Query-параметры должны быть JSON-объектом.' });
+            return;
+          }
+        } catch (error) {
+          setResult({ error: `Ошибка парсинга JSON: ${(error as Error).message}` });
+          return;
+        }
       }
-      const trimmedPayload = payload.trim();
+    
+      let body: unknown;
+      let contentType: string | undefined;
 
-      if (request.method === 'POST' && !trimmedPayload) {
-        setResult({ error: 'Добавьте JSON или текстовое тело запроса либо прикрепите файл.' });
-        return;
-      }
-
-      let body: unknown = undefined;
-
-      if (trimmedPayload) {
+      if (request.method === 'POST') {
+        const trimmedPayload = payload.trim();
+        if (!trimmedPayload) {
+          setResult({ error: 'Добавьте тело POST-запроса.' });
+          return;
+        }
         if (payloadType === 'plain-text') {
-          body = { text: trimmedPayload };
+          body = trimmedPayload;
+          contentType = 'text/plain';
         } else {
-          try {
-            body = JSON.parse(trimmedPayload);
+          try {body = JSON.parse(trimmedPayload) as unknown;
+            contentType = 'application/json';
           } catch (error) {
             setResult({ error: `Ошибка парсинга JSON: ${(error as Error).message}` });
             return;
           }
         }
       }
-
-      const response = await sendProxyJsonRequest({ ...request, body });
+      const response = await sendProxyJsonRequest({ ...request, params, body, contentType });
       setResult(response);
-      resetInputs();
     } catch (error) {
       setResult({ error: (error as Error).message });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleFileChange = (nextFile: File | null) => {
-    setFile(nextFile);
-    if (nextFile) {
-      setPayload('');
     }
   };
 
@@ -133,7 +117,7 @@ export function ProxyTester() {
 
       <div className="form-group">
         <p>Метод:</p>
-        <select value={request.method} onChange={(event) => handleChange({ method: event.target.value })}>
+        <select value={request.method} onChange={(event) => handleChange({ method: event.target.value as 'GET' | 'POST' })}>
           <option value="GET">GET</option>
           <option value="POST">POST</option>
         </select>
@@ -144,6 +128,16 @@ export function ProxyTester() {
         <input value={request.endpoint} onChange={(event) => handleChange({ endpoint: event.target.value })} />
       </div>
 
+      <div className="form-group">
+        <p>Query-параметры (JSON):</p>
+        <textarea
+          rows={5}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Введите JSON-объект с query-параметрами (опционально)."
+        />
+      </div>
+
       {request.method === 'POST' && (
         <div className="form-group">
           <p>Тело запроса:</p>
@@ -152,21 +146,21 @@ export function ProxyTester() {
               <input
                 type="radio"
                 name="payload-mode"
-                value="json"
-                checked={payloadType === 'json'}
-                onChange={() => setPayloadType('json')}
+                value="plain-text"
+                checked={payloadType === 'plain-text'}
+                onChange={() => setPayloadType('plain-text')}
               />
-              JSON
+              text/plain
             </label>
             <label>
               <input
                 type="radio"
                 name="payload-mode"
-                value="plain-text"
-                checked={payloadType === 'plain-text'}
-                onChange={() => setPayloadType('plain-text')}
+                value="json"
+                checked={payloadType === 'json'}
+                onChange={() => setPayloadType('json')}
               />
-              Текст (будет отправлен как {`{"text": "..."}`})
+              application/json
             </label>
           </div>
           <textarea
@@ -175,18 +169,11 @@ export function ProxyTester() {
             onChange={(event) => setPayload(event.target.value)}
             placeholder={
               payloadType === 'plain-text'
-                ? 'Вставьте сюда текст договора. Он будет отправлен как {"text": "..."}.'
-                : 'Введите JSON-тело запроса.'
+              ? 'Введите текст, который будет отправлен как text/plain.'
+                : 'Введите JSON-тело POST-запроса.'
             }
           />
-          <p>ИЛИ выберите файл:</p>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={(event) => handleFileChange(event.target.files ? event.target.files[0] ?? null : null)}
-          />
-          {file && <p>Файл «{file.name}» будет отправлен вместо содержимого textarea.</p>}
-        </div>
+           </div>
       )}
 
       <button className="btn btn-primary form" onClick={handleSend} type="button" disabled={loading}>
